@@ -1,0 +1,39 @@
+name: Sync OCA vertical-hotel 19.0
+
+on:
+  schedule:
+    - cron: '37 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-oca-vertical-hotel-19
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'marc-nexbia/vertical-hotel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Merge official OCA vertical-hotel 19.0 updates without forcing changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/${REPOSITORY}/merge-upstream" \
+            -H "Accept: application/vnd.github+json" \
+            -f branch='19.0' > sync-result.json
+          {
+            echo '## OCA vertical-hotel 19.0 synchronization'
+            echo 'Upstream: https://github.com/OCA/vertical-hotel/tree/19.0'
+            echo 'Target: https://github.com/marc-nexbia/vertical-hotel/tree/19.0'
+            echo '```json'
+            cat sync-result.json
+            echo '```'
+            echo 'No force push or reset is used. Conflicts fail the workflow.'
+          } >> "$GITHUB_STEP_SUMMARY"
